@@ -17,7 +17,8 @@ import {
   Globe,
   Database,
   X,
-  Trash2
+  Trash2,
+  Menu
 } from 'lucide-react';
 import {
   XAxis,
@@ -78,6 +79,7 @@ export default function App() {
   const [projects, setProjects] = useState(INITIAL_PROJECTS);
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const presentationRef = useRef(null);
   const [newProject, setNewProject] = useState({
@@ -176,7 +178,47 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex" style={{fontFamily: 'Inter, system-ui, sans-serif'}}>
-      {/* Navigation Sidebar */}
+      {/* Mobile Header Bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-slate-950 border-b border-slate-900 flex items-center justify-between px-5 z-[150]">
+        <h1 className="text-xl font-black italic tracking-tighter flex items-center gap-2 text-white">
+          <div className="w-7 h-7 bg-emerald-500 rounded flex items-center justify-center text-slate-950 font-black text-sm">E</div>
+          SENTINEL
+        </h1>
+        <button onClick={() => setMobileNavOpen(true)} className="p-2 text-slate-400 hover:text-white transition-colors">
+          <Menu size={22} />
+        </button>
+      </div>
+
+      {/* Mobile Nav Overlay */}
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-[160] flex">
+          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
+          <div className="relative w-72 bg-slate-950 border-r border-slate-900 h-full p-6 flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center mb-10">
+              <h1 className="text-2xl font-black italic tracking-tighter flex items-center gap-2 text-white">
+                <div className="w-7 h-7 bg-emerald-500 rounded flex items-center justify-center text-slate-950 font-black text-sm">E</div>
+                SENTINEL
+              </h1>
+              <button onClick={() => setMobileNavOpen(false)} className="p-1.5 text-slate-500 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <nav className="flex-1">
+              <SidebarItem icon={LayoutDashboard} label="Command Center" active={view === 'dashboard'} onClick={() => { setView('dashboard'); setMobileNavOpen(false); }} />
+              <SidebarItem icon={FileText} label="Project Audit" active={view === 'audit'} onClick={() => { setView('audit'); setMobileNavOpen(false); }} />
+              <SidebarItem icon={Presentation} label="Client Mode" active={view === 'presentation'} onClick={() => { setView('presentation'); setMobileNavOpen(false); }} />
+            </nav>
+            <div className="mt-auto space-y-4 pt-8 border-t border-slate-900">
+              <SidebarItem icon={Settings} label="Market Logic" active={view === 'settings'} onClick={() => { setView('settings'); setMobileNavOpen(false); }} />
+              <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-900 text-center">
+                <div className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Dan Deigan Verified</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Navigation Sidebar */}
       <aside className="hidden lg:flex flex-col w-72 border-r border-slate-900 h-screen sticky top-0 p-6 bg-slate-950/50 backdrop-blur-xl z-50">
         <div className="mb-12 px-2">
           <h1 className="text-3xl font-black italic tracking-tighter flex items-center gap-2 text-white">
@@ -199,7 +241,7 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+      <main className="flex-1 p-6 pt-20 lg:pt-6 md:p-12 lg:p-12 overflow-y-auto">
         <div className="max-w-7xl mx-auto pb-20">
 
           {/* DASHBOARD */}
