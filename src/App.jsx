@@ -13,7 +13,9 @@ import {
   Plus,
   ChevronRight,
   Globe,
-  Database
+  Database,
+  X,
+  Trash2
 } from 'lucide-react';
 import {
   XAxis,
@@ -71,8 +73,12 @@ const INITIAL_PROJECTS = [
 
 export default function App() {
   const [view, setView] = useState('dashboard');
-  const [projects] = useState(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState(INITIAL_PROJECTS);
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProject, setNewProject] = useState({
+    name: '', origin: '', destination: '', quoteDate: '', originalCost: '', currentMargin: '', volume: '', status: 'stable'
+  });
   const [marketIndices, setMarketIndices] = useState({
     fuelSurchargeDelta: 18.4,
     laneVolatilityIndex: 12.2,
@@ -107,6 +113,25 @@ export default function App() {
     });
     return { totalPortfolioErosion };
   }, [projects, marketIndices]);
+
+  const handleAddProject = () => {
+    if (!newProject.name || !newProject.origin || !newProject.destination || !newProject.originalCost) return;
+    setProjects(prev => [...prev, {
+      ...newProject,
+      id: Date.now().toString(),
+      originalCost: Number(newProject.originalCost),
+      currentMargin: Number(newProject.currentMargin) || 20,
+      volume: Number(newProject.volume) || 1,
+    }]);
+    setNewProject({ name: '', origin: '', destination: '', quoteDate: '', originalCost: '', currentMargin: '', volume: '', status: 'stable' });
+    setShowAddModal(false);
+  };
+
+  const handleDeleteProject = (id, e) => {
+    e.stopPropagation();
+    setProjects(prev => prev.filter(p => p.id !== id));
+    if (selectedProjectId === id) setSelectedProjectId(projects[0]?.id);
+  };
 
   const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
     <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-1 ${active ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
@@ -167,7 +192,7 @@ export default function App() {
               <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-md">
                   <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Current Project Backlog</h2>
-                  <button className="p-3 bg-emerald-500 text-slate-950 rounded-xl hover:scale-105 transition-transform shadow-lg shadow-emerald-500/20">
+                  <button onClick={() => setShowAddModal(true)} className="p-3 bg-emerald-500 text-slate-950 rounded-xl hover:scale-105 transition-transform shadow-lg shadow-emerald-500/20">
                     <Plus size={20} />
                   </button>
                 </div>
@@ -203,13 +228,18 @@ export default function App() {
                               {newMargin.toFixed(1)}%
                             </td>
                             <td className="px-8 py-6">
-                              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                p.status === 'critical' ? 'bg-red-500/20 text-red-500 border-red-500' :
-                                p.status === 'at-risk' ? 'bg-orange-500/20 text-orange-500 border-orange-500' :
-                                'bg-emerald-500/20 text-emerald-500 border-emerald-500'
-                              }`}>
-                                {p.status}
-                              </span>
+                              <div className="flex items-center gap-3">
+                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                  p.status === 'critical' ? 'bg-red-500/20 text-red-500 border-red-500' :
+                                  p.status === 'at-risk' ? 'bg-orange-500/20 text-orange-500 border-orange-500' :
+                                  'bg-emerald-500/20 text-emerald-500 border-emerald-500'
+                                }`}>
+                                  {p.status}
+                                </span>
+                                <button onClick={(e) => handleDeleteProject(p.id, e)} className="p-1.5 text-slate-600 hover:text-red-500 transition-colors rounded-lg hover:bg-red-500/10">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -387,6 +417,62 @@ export default function App() {
           <span className="text-emerald-500 font-bold tracking-[0.4em]">SYSTEM STATUS: FULL SYNC ACTIVE</span>
         </div>
       </div>
+
+      {/* Add Project Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-10 w-full max-w-lg shadow-2xl">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">New Project Lane</h2>
+              <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {[
+                { label: 'Project Name', key: 'name', placeholder: 'e.g. Acme Corp - Q2 Midwest Move' },
+                { label: 'Origin', key: 'origin', placeholder: 'e.g. Savannah, GA' },
+                { label: 'Destination', key: 'destination', placeholder: 'e.g. Chicago, IL' },
+                { label: 'Quote Date', key: 'quoteDate', placeholder: '', type: 'date' },
+                { label: 'Awarded Rate ($)', key: 'originalCost', placeholder: '2450', type: 'number' },
+                { label: 'Current Margin (%)', key: 'currentMargin', placeholder: '25', type: 'number' },
+                { label: 'Volume (loads)', key: 'volume', placeholder: '10', type: 'number' },
+              ].map(({ label, key, placeholder, type }) => (
+                <div key={key}>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">{label}</label>
+                  <input
+                    type={type || 'text'}
+                    placeholder={placeholder}
+                    value={newProject[key]}
+                    onChange={e => setNewProject(p => ({ ...p, [key]: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold text-sm focus:border-emerald-500 focus:outline-none transition-all placeholder:text-slate-600"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Risk Status</label>
+                <select
+                  value={newProject.status}
+                  onChange={e => setNewProject(p => ({ ...p, status: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-bold text-sm focus:border-emerald-500 focus:outline-none transition-all"
+                >
+                  <option value="stable">Stable</option>
+                  <option value="at-risk">At Risk</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button onClick={() => setShowAddModal(false)} className="flex-1 py-4 border border-slate-700 rounded-2xl text-xs font-black uppercase text-slate-400 hover:text-white transition-all">
+                Cancel
+              </button>
+              <button onClick={handleAddProject} className="flex-1 py-4 bg-emerald-500 text-slate-950 rounded-2xl text-xs font-black uppercase hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">
+                Add to Backlog
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
