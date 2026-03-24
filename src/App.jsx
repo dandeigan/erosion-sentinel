@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useMarketData } from './useMarketData';
 import {
   TrendingDown,
   AlertTriangle,
@@ -80,6 +81,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
   const [showAddModal, setShowAddModal] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { diesel } = useMarketData();
   const [exportingPDF, setExportingPDF] = useState(false);
   const presentationRef = useRef(null);
   const [newProject, setNewProject] = useState({
@@ -475,7 +477,13 @@ export default function App() {
       <div className="fixed bottom-0 left-0 right-0 h-12 bg-slate-900 border-t border-slate-800 flex items-center px-10 overflow-hidden z-50 backdrop-blur-xl">
         <div className="flex items-center gap-16 whitespace-nowrap text-[11px] font-black uppercase tracking-[0.2em]" style={{animation: 'marquee 35s linear infinite'}}>
           <span className="text-slate-400 flex items-center gap-2">
-            <Fuel size={14} className="text-red-500" /> DOE DIESEL: <span className="text-white">$5.122 (+0.04)</span>
+            <Fuel size={14} className="text-red-500" /> DOE DIESEL:{' '}
+            {diesel.loading
+              ? <span className="text-slate-500">SYNCING...</span>
+              : <span className={parseFloat(diesel.change) >= 0 ? 'text-red-400' : 'text-emerald-400'}>
+                  ${diesel.price} ({parseFloat(diesel.change) >= 0 ? '+' : ''}{diesel.change})
+                </span>
+            }
           </span>
           <span className="text-slate-400 flex items-center gap-2">
             <Globe size={14} className="text-emerald-500" /> DAT IQ BENCHMARK: <span className="text-white">VOLATILITY +12%</span>
