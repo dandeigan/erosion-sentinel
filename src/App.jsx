@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   TrendingDown,
   AlertTriangle,
@@ -76,6 +78,8 @@ export default function App() {
   const [projects, setProjects] = useState(INITIAL_PROJECTS);
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const presentationRef = useRef(null);
   const [newProject, setNewProject] = useState({
     name: '', origin: '', destination: '', quoteDate: '', originalCost: '', currentMargin: '', volume: '', status: 'stable'
   });
@@ -113,6 +117,25 @@ export default function App() {
     });
     return { totalPortfolioErosion };
   }, [projects, marketIndices]);
+
+  const handleExportPDF = async () => {
+    if (!presentationRef.current) return;
+    setExportingPDF(true);
+    try {
+      const canvas = await html2canvas(presentationRef.current, {
+        scale: 2,
+        backgroundColor: '#020617',
+        useCORS: true,
+        logging: false,
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width / 2, canvas.height / 2] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`${selectedProject.name.replace(/\s+/g, '-')}-erosion-audit.pdf`);
+    } finally {
+      setExportingPDF(false);
+    }
+  };
 
   const handleAddProject = () => {
     if (!newProject.name || !newProject.origin || !newProject.destination || !newProject.originalCost) return;
@@ -317,7 +340,7 @@ export default function App() {
 
           {/* CLIENT MODE / PRESENTATION */}
           {view === 'presentation' && (
-            <div className="max-w-5xl mx-auto space-y-12 py-12">
+            <div ref={presentationRef} className="max-w-5xl mx-auto space-y-12 py-12">
               <div className="flex justify-between items-end border-b-8 border-emerald-500 pb-10">
                 <div>
                   <div className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-2">Internal Margin Protection Audit</div>
@@ -357,8 +380,12 @@ export default function App() {
                 <button onClick={() => setView('audit')} className="px-12 py-5 border-2 border-slate-700 rounded-2xl text-xs font-black uppercase hover:bg-white hover:text-slate-950 transition-all shadow-xl">
                   Exit Client View
                 </button>
-                <button className="px-12 py-5 bg-white text-slate-950 rounded-2xl text-xs font-black uppercase hover:bg-emerald-500 transition-all shadow-2xl">
-                  Download Evidence (PDF)
+                <button
+                  onClick={handleExportPDF}
+                  disabled={exportingPDF}
+                  className="px-12 py-5 bg-white text-slate-950 rounded-2xl text-xs font-black uppercase hover:bg-emerald-500 transition-all shadow-2xl disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {exportingPDF ? 'Generating...' : 'Download Evidence (PDF)'}
                 </button>
               </div>
             </div>
