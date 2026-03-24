@@ -81,7 +81,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
   const [showAddModal, setShowAddModal] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { diesel } = useMarketData();
+  const { diesel, laneRates } = useMarketData(projects);
   const [exportingPDF, setExportingPDF] = useState(false);
   const presentationRef = useRef(null);
   const [newProject, setNewProject] = useState({
@@ -343,6 +343,31 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+                {/* Live DAT Rate Card */}
+                {(() => {
+                  const live = laneRates[selectedProject.id];
+                  return (
+                    <div className={`bg-slate-950 p-6 rounded-2xl border ${live ? 'border-blue-500/30' : 'border-slate-800'}`}>
+                      <div className="text-[10px] text-blue-400 font-black uppercase mb-1 flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></div>
+                        DAT Ratecast — Live Spot
+                      </div>
+                      {live ? (
+                        <>
+                          <div className="text-2xl font-black text-blue-400">
+                            ${live.spotRatePerTrip?.toLocaleString() ?? '—'} <span className="text-sm font-bold text-slate-500">/ trip</span>
+                          </div>
+                          {live.spotRatePerMile && (
+                            <div className="text-xs text-slate-500 font-bold mt-1">${live.spotRatePerMile?.toFixed(2)} / mi · {live.mileage?.toLocaleString()} mi</div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-sm text-slate-600 font-bold animate-pulse">Fetching market rate...</div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <button
                   onClick={() => setView('presentation')}
                   className="w-full py-5 bg-emerald-500 text-slate-950 font-black rounded-2xl uppercase shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all text-sm tracking-tighter"
