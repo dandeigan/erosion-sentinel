@@ -39,46 +39,11 @@ import {
  * Industrial Dark Mode Dashboard for Margin Recovery
  */
 
-const INITIAL_PROJECTS = [
-  {
-    id: '1',
-    name: "JBL Q1 Equipment Move",
-    origin: "Savannah, GA",
-    destination: "Chicago, IL",
-    quoteDate: "2025-10-15",
-    originalCost: 2450,
-    currentMargin: 25,
-    volume: 12,
-    status: 'at-risk'
-  },
-  {
-    id: '2',
-    name: "Standard Manufacturing - West",
-    origin: "Los Angeles, CA",
-    destination: "Phoenix, AZ",
-    quoteDate: "2025-11-20",
-    originalCost: 1800,
-    currentMargin: 20,
-    volume: 45,
-    status: 'stable'
-  },
-  {
-    id: '3',
-    name: "Global Chemicals - East",
-    origin: "Newark, NJ",
-    destination: "Atlanta, GA",
-    quoteDate: "2025-09-01",
-    originalCost: 3100,
-    currentMargin: 30,
-    volume: 8,
-    status: 'critical'
-  }
-];
 
 export default function App() {
   const [view, setView] = useState('dashboard');
-  const [projects, setProjects] = useState(INITIAL_PROJECTS);
-  const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const handleDieselUpdate = useCallback((surchargePercent) => {
@@ -92,11 +57,11 @@ export default function App() {
     name: '', origin: '', destination: '', quoteDate: '', originalCost: '', currentMargin: '', volume: '', status: 'stable'
   });
   const [marketIndices, setMarketIndices] = useState({
-    fuelSurchargeDelta: 18.4,
-    laneVolatilityIndex: 12.2,
-    avgPortDelayDays: 6,
-    portCostImpact: 450,
-    datIQLanePremium: 15
+    fuelSurchargeDelta: null,
+    laneVolatilityIndex: null,
+    avgPortDelayDays: null,
+    portCostImpact: 0,
+    datIQLanePremium: 0
   });
 
   const selectedProject = useMemo(() =>
@@ -263,10 +228,10 @@ export default function App() {
           {view === 'dashboard' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="Monthly Erosion" value={`$${aggregateData.totalPortfolioErosion.toLocaleString()}`} subValue="Total Margin Leakage" icon={TrendingDown} colorClass="text-red-500" />
-                <StatCard label="Market Volatility" value={`+${marketIndices.laneVolatilityIndex}%`} subValue="National Freight Index" icon={Globe} colorClass="text-blue-400" />
-                <StatCard label="Active Projects" value={projects.length} subValue="Live lanes under audit" icon={Database} colorClass="text-emerald-400" />
-                <StatCard label="Carrier Trust" value="42%" subValue="Gouge Alert Threshold" icon={AlertTriangle} colorClass="text-orange-400" />
+                <StatCard label="Monthly Erosion" value={projects.length ? `$${aggregateData.totalPortfolioErosion.toLocaleString()}` : '—'} subValue="Total Margin Leakage" icon={TrendingDown} colorClass="text-red-500" />
+                <StatCard label="Fuel Surcharge" value={marketIndices.fuelSurchargeDelta != null ? `+${marketIndices.fuelSurchargeDelta.toFixed(1)}%` : <span className="text-slate-600 animate-pulse text-lg">Syncing...</span>} subValue="Live EIA Diesel Index" icon={Globe} colorClass="text-blue-400" />
+                <StatCard label="Active Projects" value={projects.length || '—'} subValue="Live lanes under audit" icon={Database} colorClass="text-emerald-400" />
+                <StatCard label="Carrier Trust" value={projects.length ? '42%' : '—'} subValue="Gouge Alert Threshold" icon={AlertTriangle} colorClass="text-orange-400" />
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
@@ -287,6 +252,14 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
+                      {projects.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-8 py-16 text-center">
+                            <div className="text-slate-600 font-black uppercase tracking-widest text-sm mb-2">No Projects Yet</div>
+                            <div className="text-slate-700 text-xs font-bold uppercase tracking-wider">Hit the + button to add your first lane</div>
+                          </td>
+                        </tr>
+                      )}
                       {projects.map(p => {
                         const { dollarErosion, newMargin, usingLiveRate } = calculateErosion(p);
                         return (
@@ -513,8 +486,9 @@ export default function App() {
                   <input
                     type="number"
                     className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-2xl font-black text-white focus:border-emerald-500 focus:outline-none transition-all"
-                    value={marketIndices.fuelSurchargeDelta}
-                    onChange={(e) => setMarketIndices({ ...marketIndices, fuelSurchargeDelta: Number(e.target.value) })}
+                    value={marketIndices.fuelSurchargeDelta ?? ''}
+                    placeholder="Auto-syncing from EIA..."
+                    onChange={(e) => setMarketIndices({ ...marketIndices, fuelSurchargeDelta: e.target.value === '' ? null : Number(e.target.value) })}
                   />
                 </div>
                 <div>
