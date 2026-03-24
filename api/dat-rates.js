@@ -30,6 +30,21 @@ function parseLocation(str) {
   return { city: parts[0], stateProv: parts[1] };
 }
 
+function extractRates(data) {
+  const perTrip = data?.forecasts?.perTrip?.[0];
+  const perMile = data?.forecasts?.perMile?.[0];
+  return {
+    perTrip: perTrip?.forecastUSD ?? null,
+    perMile: perMile?.forecastUSD ?? null,
+    maeHigh: perTrip?.mae?.highUSD ?? null,
+    maeLow: perTrip?.mae?.lowUSD ?? null,
+    forecastDate: perTrip?.forecastDate ?? null,
+    mileage: data?.mileage ?? null,
+    origin: data?.origin ?? null,
+    destination: data?.destination ?? null,
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -41,45 +56,45 @@ export default async function handler(req, res) {
   const destParsed = parseLocation(destination);
 
   if (!originParsed || !destParsed) {
-    return res.status(400).json({ error: 'Invalid origin or destination format. Use "City, ST"' });
+    return res.status(400).json({ error: 'Invalid origin or destination. Use "City, ST" format.' });
   }
 
   try {
     const token = await getDATToken();
+    const baseUrl = `${process.env.DAT_API_URL}/linehaulrates/v1/forecasts`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+    const body = {
+      origin: originParsed,
+      destination: destParsed,
+      equipmentCategory,
+    };
 
-    const rateRes = await fetch(`${process.env.DAT_API_URL}/linehaulrates/v1/forecasts/spot`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        origin: originParsed,
-        destination: destParsed,
-        equipmentCategory,
-        forecastPeriod: '8DAYS',
+    // Fetch spot (8DAYS) and contract (52WEEKS) in parallel
+    const [spotRes, contractRes] = await Promise.all([
+      fetch(`${baseUrl}/spot`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...body, forecastPeriod: '8DAYS' }),
       }),
-    });
+      fetch(`${baseUrl}/contract`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...body, forecastPeriod: '52WEEKS' }),
+      }),
+    ]);
 
-    if (!rateRes.ok) {
-      const err = await rateRes.text();
-      throw new Error(`DAT Ratecast error ${rateRes.status}: ${err}`);
-    }
-
-    const data = await rateRes.json();
-
-    // Pull the first perTrip forecast as the spot rate
-    const perTrip = data?.forecasts?.perTrip?.[0];
-    const perMile = data?.forecasts?.perMile?.[0];
+    const [spotData, contractData] = await Promise.all([
+      spotRes.ok ? spotRes.json() : null,
+      contractRes.ok ? contractRes.json() : null,
+    ]);
 
     res.status(200).json({
-      origin: data.origin,
-      destination: data.destination,
-      mileage: data.mileage,
-      spotRatePerTrip: perTrip?.forecastUSD ?? null,
-      spotRatePerMile: perMile?.forecastUSD ?? null,
-      forecastDate: perTrip?.forecastDate ?? null,
-      mae: perTrip?.mae ?? null,
+      spot: spotData ? extractRates(spotData) : null,
+      contract: contractData ? extractRates(contractData) : null,
+      equipmentCategory,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

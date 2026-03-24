@@ -343,27 +343,52 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                {/* Live DAT Rate Card */}
+                {/* Live DAT Rate Cards */}
                 {(() => {
                   const live = laneRates[selectedProject.id];
+                  const synced = !!live;
                   return (
-                    <div className={`bg-slate-950 p-6 rounded-2xl border ${live ? 'border-blue-500/30' : 'border-slate-800'}`}>
-                      <div className="text-[10px] text-blue-400 font-black uppercase mb-1 flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></div>
-                        DAT Ratecast — Live Spot
+                    <div className="space-y-3">
+                      {/* Spot Rate */}
+                      <div className={`bg-slate-950 p-5 rounded-2xl border ${synced ? 'border-blue-500/30' : 'border-slate-800'}`}>
+                        <div className="text-[10px] text-blue-400 font-black uppercase mb-1 flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${synced ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></div>
+                          DAT Spot Rate (8-Day)
+                        </div>
+                        {synced && live.spot ? (
+                          <>
+                            <div className="text-2xl font-black text-blue-400">
+                              ${live.spot.perTrip?.toLocaleString() ?? '—'} <span className="text-sm font-bold text-slate-500">/ trip</span>
+                            </div>
+                            <div className="text-xs text-slate-500 font-bold mt-0.5">
+                              {live.spot.perMile ? `$${live.spot.perMile.toFixed(2)}/mi` : ''}{live.spot.mileage ? ` · ${live.spot.mileage.toLocaleString()} mi` : ''}
+                              {live.spot.maeLow && live.spot.maeHigh ? ` · MAE $${live.spot.maeLow}–$${live.spot.maeHigh}` : ''}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-slate-600 font-bold animate-pulse">Fetching spot rate...</div>
+                        )}
                       </div>
-                      {live ? (
-                        <>
-                          <div className="text-2xl font-black text-blue-400">
-                            ${live.spotRatePerTrip?.toLocaleString() ?? '—'} <span className="text-sm font-bold text-slate-500">/ trip</span>
-                          </div>
-                          {live.spotRatePerMile && (
-                            <div className="text-xs text-slate-500 font-bold mt-1">${live.spotRatePerMile?.toFixed(2)} / mi · {live.mileage?.toLocaleString()} mi</div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-sm text-slate-600 font-bold animate-pulse">Fetching market rate...</div>
-                      )}
+                      {/* Contract Rate */}
+                      <div className={`bg-slate-950 p-5 rounded-2xl border ${synced ? 'border-purple-500/30' : 'border-slate-800'}`}>
+                        <div className="text-[10px] text-purple-400 font-black uppercase mb-1 flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${synced ? 'bg-purple-400 animate-pulse' : 'bg-slate-600'}`}></div>
+                          DAT Contract Rate (52-Week)
+                        </div>
+                        {synced && live.contract ? (
+                          <>
+                            <div className="text-2xl font-black text-purple-400">
+                              ${live.contract.perTrip?.toLocaleString() ?? '—'} <span className="text-sm font-bold text-slate-500">/ trip</span>
+                            </div>
+                            <div className="text-xs text-slate-500 font-bold mt-0.5">
+                              {live.contract.perMile ? `$${live.contract.perMile.toFixed(2)}/mi` : ''}
+                              {live.contract.maeLow && live.contract.maeHigh ? ` · MAE $${live.contract.maeLow}–$${live.contract.maeHigh}` : ''}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-slate-600 font-bold animate-pulse">Fetching contract rate...</div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
