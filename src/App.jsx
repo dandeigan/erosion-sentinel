@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useMarketData } from './useMarketData';
@@ -81,7 +81,11 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(INITIAL_PROJECTS[0].id);
   const [showAddModal, setShowAddModal] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { diesel, laneRates } = useMarketData(projects);
+  const handleDieselUpdate = useCallback((surchargePercent) => {
+    setMarketIndices(prev => ({ ...prev, fuelSurchargeDelta: surchargePercent }));
+  }, []);
+
+  const { diesel, laneRates } = useMarketData(projects, handleDieselUpdate);
   const [exportingPDF, setExportingPDF] = useState(false);
   const presentationRef = useRef(null);
   const [newProject, setNewProject] = useState({
@@ -100,7 +104,15 @@ export default function App() {
   , [selectedProjectId, projects]);
 
   const calculateErosion = (project) => {
-    const datPremiumVal = project.originalCost * (marketIndices.datIQLanePremium / 100);
+    const live = laneRates[project.id];
+    // If we have a live DAT spot rate, use the delta vs awarded cost as the lane premium
+    // Otherwise fall back to the manual datIQLanePremium %
+    let datPremiumVal;
+    if (live?.spot?.perTrip && live.spot.perTrip > project.originalCost) {
+      datPremiumVal = live.spot.perTrip - project.originalCost;
+    } else {
+      datPremiumVal = project.originalCost * (marketIndices.datIQLanePremium / 100);
+    }
     const fuelImpact = project.originalCost * (marketIndices.fuelSurchargeDelta / 100);
     const totalCurrentCost = project.originalCost + datPremiumVal + fuelImpact + marketIndices.portCostImpact;
     const dollarErosion = totalCurrentCost - project.originalCost;
@@ -109,7 +121,8 @@ export default function App() {
     return {
       dollarErosion,
       totalCurrentCost,
-      newMargin: project.currentMargin - marginErosion
+      newMargin: project.currentMargin - marginErosion,
+      usingLiveRate: !!(live?.spot?.perTrip),
     };
   };
 
@@ -275,7 +288,7 @@ export default function App() {
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                       {projects.map(p => {
-                        const { dollarErosion, newMargin } = calculateErosion(p);
+                        const { dollarErosion, newMargin, usingLiveRate } = calculateErosion(p);
                         return (
                           <tr
                             key={p.id}
@@ -283,7 +296,10 @@ export default function App() {
                             onClick={() => { setSelectedProjectId(p.id); setView('audit'); }}
                           >
                             <td className="px-8 py-6">
-                              <div className="font-bold text-slate-100 text-lg">{p.name}</div>
+                              <div className="font-bold text-slate-100 text-lg flex items-center gap-2">
+                                {p.name}
+                                {usingLiveRate && <span className="text-[9px] font-black text-blue-400 bg-blue-400/10 border border-blue-400/30 px-2 py-0.5 rounded-full uppercase tracking-widest">Live DAT</span>}
+                              </div>
                               <div className="text-[11px] text-slate-500 uppercase font-black flex items-center gap-2 mt-1 italic tracking-widest">
                                 {p.origin} <ArrowRight size={10} className="text-emerald-500" /> {p.destination}
                               </div>

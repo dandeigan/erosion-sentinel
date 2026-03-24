@@ -14,12 +14,23 @@ export default async function handler(req, res) {
 
     if (!latest) return res.status(200).json({ price: null, change: null, period: null });
 
-    const price = parseFloat(latest.value).toFixed(3);
+    const price = parseFloat(latest.value);
     const change = previous
-      ? (parseFloat(latest.value) - parseFloat(previous.value)).toFixed(3)
+      ? (price - parseFloat(previous.value)).toFixed(3)
       : null;
 
-    res.status(200).json({ price, change, period: latest.period });
+    // Industry standard fuel surcharge formula
+    // Baseline: $3.00/gal (pre-2021 trucking reference)
+    // Surcharge % = ((current - baseline) / baseline) * 100
+    const BASELINE_DIESEL = 3.00;
+    const fuelSurchargePercent = ((price - BASELINE_DIESEL) / BASELINE_DIESEL) * 100;
+
+    res.status(200).json({
+      price: price.toFixed(3),
+      change,
+      period: latest.period,
+      fuelSurchargePercent: parseFloat(fuelSurchargePercent.toFixed(1)),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

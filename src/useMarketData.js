@@ -1,18 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export function useMarketData(projects = []) {
-  const [diesel, setDiesel] = useState({ price: null, change: null, period: null, loading: true });
-  const [laneRates, setLaneRates] = useState({}); // keyed by project id
+export function useMarketData(projects = [], onDieselUpdate = null) {
+  const [diesel, setDiesel] = useState({ price: null, change: null, period: null, fuelSurchargePercent: null, loading: true });
+  const [laneRates, setLaneRates] = useState({});
 
-  const fetchDiesel = async () => {
+  const fetchDiesel = useCallback(async () => {
     try {
       const res = await fetch('/api/diesel');
       const data = await res.json();
-      if (data.price) setDiesel({ ...data, loading: false });
+      if (data.price) {
+        setDiesel({ ...data, loading: false });
+        if (data.fuelSurchargePercent != null && onDieselUpdate) {
+          onDieselUpdate(data.fuelSurchargePercent);
+        }
+      }
     } catch {
       setDiesel(d => ({ ...d, loading: false }));
     }
-  };
+  }, [onDieselUpdate]);
 
   const fetchLaneRate = useCallback(async (project) => {
     try {
@@ -42,7 +47,7 @@ export function useMarketData(projects = []) {
     fetchDiesel();
     const dieselInterval = setInterval(fetchDiesel, 5 * 60 * 1000);
     return () => clearInterval(dieselInterval);
-  }, []);
+  }, [fetchDiesel]);
 
   useEffect(() => {
     if (projects.length > 0) {
